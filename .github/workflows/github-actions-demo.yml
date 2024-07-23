@@ -23,9 +23,9 @@ jobs:
     needs: Explore-GitHub-Actions
   # type of machine to run the job on
     runs-on: ubuntu-latest
-    name: 'ServiceNow DevOps Change'
+    name: ServiceNow Change Approval
     steps:
-      - name: ServiceNow Change Approval
+      - name: ServiceNow Change
         uses: ServiceNow/servicenow-devops-change@v4.0.0
         with:
         # Devops Integration Token
@@ -37,7 +37,7 @@ jobs:
         # GitHub Context
           context-github: ${{ toJSON(github) }}
         # Display Name of the Job
-          job-name: 'ServiceNow DevOps Change'
+          job-name: ServiceNow Change Approval
     
   deploy:
     name: Deploy
