@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     name: 'ServiceNow DevOps Change'
     steps:
-      - name: ServiceNow Change
+      - name: ServiceNow Change Approval
         uses: ServiceNow/servicenow-devops-change@v3.0.0
         with:
         # Devops Integration Token
