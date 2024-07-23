@@ -19,26 +19,28 @@ jobs:
       - run: echo "🍏 This job's status is ${{ job.status }}."
       
   changeApproval:
-  # jobs that must complete successfully before this job will run
-    needs: Explore-GitHub-Actions
-  # type of machine to run the job on
-    runs-on: ubuntu-latest
     name: ServiceNow Change Approval
-    steps:
-      - name: ServiceNow Change
-        uses: ServiceNow/servicenow-devops-change@v4.0.0
+    runs-on: ubuntu-latest
+
+    steps:     
+      - name: ServiceNow Change Approval
+        uses: ServiceNow/servicenow-devops-change@v3.1.0
+        id: create
         with:
           devops-integration-user-name: ${{ secrets.SN_DEVOPS_USER }}
           devops-integration-user-password: ${{ secrets.SN_DEVOPS_PASSWORD }}
-        # ServiceNow Instance URL
           instance-url: ${{ secrets.SN_INSTANCE_URL }}
-        # Orchestration Tool Id
           tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
-          change-request: '{"setCloseCode":"true","attributes":{"short_description":"Automated Software Deployment","description":"Automated Software Deployment.","assignment_group":"cfff7055dbe7ad10f452570bd39619e3","implementation_plan":"Software update is tested and results can be found in Test Summaries Tab; When the change is approved the implementation happens automated by the CICD pipeline within the change planned start and end time window.","backout_plan":"When software fails in production, the previous software release will be re-deployed.","test_plan":"Testing if the software was successfully deployed"}}'
-        # GitHub Context
           context-github: ${{ toJSON(github) }}
-        # Display Name of the Job
-          job-name: ServiceNow Change Approval
+          job-name: 'ServiceNow Change Approval'
+          change-request: '{"setCloseCode":"true","attributes":{"short_description":"Automated Software Deployment","description":"Automated Software Deployment.","assignment_group":"cfff7055dbe7ad10f452570bd39619e3","implementation_plan":"Software update is tested and results can be found in Test Summaries Tab; When the change is approved the implementation happens automated by the CICD pipeline within the change planned start and end time window.","backout_plan":"When software fails in production, the previous software release will be re-deployed.","test_plan":"Testing if the software was successfully deployed"}}'
+          interval: '100'
+          timeout: '3600'
+          changeCreationTimeOut: '3600'
+          abortOnChangeCreationFailure: true
+          abortOnChangeStepTimeout: true
+      - name: Output of Change Creation
+        run: echo "change-request-number = ${{ steps.create.outputs.change-request-number }} and change-request-sys-id = ${{ steps.create.outputs.change-request-sys-id }} " >> $GITHUB_OUTPUT
     
   deploy:
     name: Deploy
