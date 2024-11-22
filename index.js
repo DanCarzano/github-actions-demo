@@ -14,3 +14,4 @@ module.exports = app.listen(8080, () => {
 echo('Hello World');
 
 // Test 6
+echo('Please work :)');
