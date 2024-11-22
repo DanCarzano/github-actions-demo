@@ -98,7 +98,7 @@ jobs:
     steps:
       - name: ServiceNow Change
         id: create
-        uses: DanCarzano/servicenow-devops-change@main
+        uses: DanCarzano/servicenow-devops-change@master
         with:
           devops-integration-token: ${{ secrets.SN_DEVOPS_TOKEN }}
           instance-url: ${{ secrets.SN_INSTANCE_URL }}
