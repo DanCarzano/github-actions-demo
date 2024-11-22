@@ -1,0 +1,25 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  simpleJob:
+    name: SNOW pipeline
+    uses: ./.github/workflows/workflow-template-deployment.yml
+    with:
+      nodeVersion: '14'
+      deployMessage: 'Deploying to production server...'
+      github_context: ${{ toJSON(github) }}
+      run_id: ${{ github.run_id }}
+      sha: ${{ github.sha }}
+      run_attempt: ${{ github.run_attempt }}
+      repository: ${{ github.repository }}
+      workflow: ${{ github.workflow }}
+      run_number: ${{ github.run_number }}
+    secrets:
+      SN_INSTANCE_URL: ${{ secrets.SN_INSTANCE_URL }}
+      SN_ORCHESTRATION_TOOL_ID: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
+      SN_DEVOPS_TOKEN: ${{ secrets.SN_DEVOPS_TOKEN }}

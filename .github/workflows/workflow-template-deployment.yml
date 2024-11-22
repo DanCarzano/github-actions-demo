@@ -1,0 +1,140 @@
+name: Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      nodeVersion:
+        description: 'Node.js version'
+        required: true
+        type: string
+        default: '14'
+      deployMessage:
+        description: 'Deployment message'
+        required: true
+        type: string
+        default: 'Deploying to server...'
+      github_context:
+        description: 'GitHub context from caller workflow'
+        required: true
+        type: string
+      run_id:
+        description: 'GitHub Run ID'
+        required: true
+        type: string
+      sha:
+        description: 'Commit SHA'
+        required: true
+        type: string
+      run_attempt:
+        description: 'Run Attempt Number'
+        required: false
+        type: string
+        default: '1'
+      repository:
+        description: 'GitHub Repository'
+        required: true
+        type: string
+      workflow:
+        description: 'GitHub Workflow Name'
+        required: true
+        type: string
+      run_number:
+        description: 'GitHub Run Number'
+        required: true
+        type: string
+    secrets:
+      SN_DEVOPS_TOKEN:
+        required: true
+      SN_INSTANCE_URL:
+        required: true
+      SN_ORCHESTRATION_TOOL_ID:
+        required: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.nodeVersion }}
+
+      - name: Install dependencies
+        run: npm install
+
+  registerPackage:
+    name: 'Register Package'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: ServiceNow DevOps Register Package
+        uses: ServiceNow/servicenow-devops-register-package@v3.1.0
+        with:
+          devops-integration-token: ${{ secrets.SN_DEVOPS_TOKEN }}
+          instance-url: ${{ secrets.SN_INSTANCE_URL }}
+          tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
+          context-github: ${{ inputs.github_context }}
+          artifacts: |
+            [
+              {
+                "name": "app-devops-cicd.jar",
+                "version": "1.${{ inputs.run_number }}",
+                "semanticVersion": "1.${{ inputs.run_number }}.0",
+                "repositoryName": "${{ inputs.repository }}"
+              }
+            ]
+          package-name: 'app-devops-change-velocity-cicd.war'
+          job-name: 'Register Package'
+
+  change:
+    needs: registerPackage
+    runs-on: ubuntu-latest
+    name: 'ServiceNow DevOps Change'
+    steps:
+      - name: ServiceNow Change
+        id: create
+        uses: DanCarzano/servicenow-devops-change@main
+        with:
+          devops-integration-token: ${{ secrets.SN_DEVOPS_TOKEN }}
+          instance-url: ${{ secrets.SN_INSTANCE_URL }}
+          tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
+          context-github: ${{ inputs.github_context }}
+          job-name: 'ServiceNow DevOps Change'
+          change-request: |
+            {
+              "setCloseCode": "true",
+              "attributes": {
+                "short_description": "DevOps Change Request from GitHub Pipeline",
+                "description": "GitHub Pipeline Change Request",
+                "assignment_group": "5a3b9522dbed88100c7c64a14a961957",
+                "implementation_plan": "Software update is tested and results can be found in Test Summaries Tab; When the change is approved the implementation happens automated by the CICD pipeline within the change planned start and end time window.",
+                "backout_plan": "When software fails in production, the previous software release will be re-deployed.",
+                "test_plan": "Testing if the software was successfully deployed"
+              }
+            }
+          run_id: ${{ inputs.run_id }}
+          sha: ${{ inputs.sha }}
+          run_attempt: ${{ inputs.run_attempt }}
+          repository: ${{ inputs.repository }}
+          workflow: ${{ inputs.workflow }}
+          interval: '10'  # Polling interval in seconds
+          timeout: '3600' # Timeout after 1 hour
+          changeCreationTimeOut: '3600'
+          abortOnChangeCreationFailure: true
+          abortOnChangeStepTimeout: true  # testing
+      - name: Output of Change Creation
+        run: echo "change-request-number = ${{ steps.create.outputs.change-request-number }} and change-request-sys-id = ${{ steps.create.outputs.change-request-sys-id }} " >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: change
+
+    steps:
+      - name: Deploy to server
+        run: echo "${{ inputs.deployMessage }}"
